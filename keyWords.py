@@ -27,9 +27,7 @@ if __name__ == '__main__':
 
     clean_keywords = clean_up_keywords(df)
 
-    print(clean_keywords)
-
-    print(len(clean_keywords))
+    np.save('relevantKeywords.npy', clean_keywords)
 
 
 
