@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 
 class Preprocessing:
 
-    def __init__(self, wiki_data_file, tweet_data_file):
+    def __init__(self, wiki_data_file, tweet_data_frame):
         self.wiki_data_frame = pd.read_csv(wiki_data_file)
-        self.twitter_data_frame = create_data_frame(tweet_data_file)
+        self.twitter_data_frame = tweet_data_frame
 
     def remove_ref_tweets(self, tweet_type):
         self.twitter_data_frame = self.twitter_data_frame[self.twitter_data_frame['ref_tweet_type'] != tweet_type]
@@ -19,19 +19,20 @@ class Preprocessing:
     def remove_page_breaks(text_list):
         clean_text = []
         for tx in text_list:
-            clean_text.append(' '.join(tx.splitlines(r'http\S+', '', tx)))
+            clean_text.append(' '.join(tx.splitlines()))
         return clean_text
 
     @staticmethod
     def remove_urls(text_list):
         clean_text = []
         for tx in text_list:
-            clean_text.append(re.sub())
+            clean_text.append(re.sub(r'http\S+', '', tx))
         return clean_text
 
     def clean_tweet_text(self):
         self.twitter_data_frame['text'] = self.remove_page_breaks(self.twitter_data_frame['text'].tolist())
         self.twitter_data_frame['text'] = self.remove_urls(self.twitter_data_frame['text'].tolist())
+        self.twitter_data_frame['text'] = self.remove_emoji(self.twitter_data_frame['text'].tolist())
 
     def remove_tweets_from_source(self, source):
         pass
@@ -60,6 +61,21 @@ class Preprocessing:
 
     def get_tweet_stats_per_author(self):
         return dict(zip(self.twitter_data_frame['author_id'].value_counts().index.tolist(), self.twitter_data_frame['author_id'].value_counts().tolist()))
+
+    @staticmethod
+    def remove_emoji(text_lst):
+
+        emoji_pattern = re.compile("["
+                                   u"\U0001F600-\U0001F64F"  # emoticons
+                                   u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                                   u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                                   u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                                   "]+", flags=re.UNICODE)
+        clean_txt = []
+        for tx in text_lst:
+            clean_txt.append(emoji_pattern.sub(r'', tx))
+
+        return clean_txt
 
 
 
