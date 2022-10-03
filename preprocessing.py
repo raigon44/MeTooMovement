@@ -37,6 +37,12 @@ class Preprocessing:
     def remove_tweets_from_source(self, source):
         pass
 
+    def remove_tweets_with_short_length(self, threshold):
+        self.twitter_data_frame = self.twitter_data_frame[self.twitter_data_frame['text'].str.split().str.len().gt(threshold)]
+
+    def extract_year(self):
+        self.twitter_data_frame['year'] = [timestamp[:4] for timestamp in self.twitter_data_frame['created_at'].tolist()]
+
     def get_author_data_for_tweets(self):
         author_names_twitter_id_dict = dict(zip(self.wiki_data_frame.twitterUserID, self.wiki_data_frame.name))
         author_gender_twitter_id_dict = dict(zip(self.wiki_data_frame.twitterUserID, self.wiki_data_frame.gender))
