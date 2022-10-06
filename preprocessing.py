@@ -15,6 +15,9 @@ class Preprocessing:
     def remove_ref_tweets(self, tweet_type):
         self.twitter_data_frame = self.twitter_data_frame[self.twitter_data_frame['ref_tweet_type'] != tweet_type]
 
+    def remove_hashtags(self, hashtag):
+        self.twitter_data_frame = self.twitter_data_frame[self.twitter_data_frame['text'].str.contains(hashtag)]
+
     @staticmethod
     def remove_page_breaks(text_list):
         clean_text = []

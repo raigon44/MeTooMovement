@@ -7,12 +7,13 @@ from sklearn.model_selection import train_test_split
 import extractingDataFromTwitterJson
 
 MeTooKeywords = "#metoo|#timesup|#everydaysexism|#sexualharasment|#wheniwas|#notokay|#whyididntreport|#nomoore|" \
-                "#nevermore|#meat14|#believesurvivors|#sexualassualt|#girlpower|#feminism"
+                "#nevermore|#meat14|#believesurvivors|#sexualassualt"
 
 hollywood_wikidata_filename = './data/hollywood_wikidata.csv'
 tweets_before_lst = ['./data/2017Jan.json', './data/2017Feb.json', './data/2017Mar.json', './data/2017Apr.json',
                      './data/2017May.json', './data/2017Jun.json']
-me_too_tweets = './data/MeToohashtagTweets3.json'
+#me_too_tweets = './data/MeToohashtagTweets3.json'
+me_too_tweets = './data/MeTooHastagsWithoutFeminism.json'
 
 all_tweets_by_selected_authors = './data/all_tweets_selected_author.json'
 
@@ -53,7 +54,7 @@ def create_dataset_with_all_years(hollywood_data, tweet_data, me_too_related_twe
     me_too_obj.remove_tweets_with_short_length(text_len_threshold)
     me_too_related_tweets = me_too_obj.get_author_data_for_tweets()
 
-    utilities.save_frame(me_too_related_tweets, 'variant1_1', 'MeTooTweetsWithoutRetweets')
+    utilities.save_frame(me_too_related_tweets, 'variant1_2', 'MeTooTweetsWithoutRetweets')
 
     frame_negative_samples = extractingDataFromTwitterJson.create_data_frame(tweet_data)
 
@@ -65,7 +66,7 @@ def create_dataset_with_all_years(hollywood_data, tweet_data, me_too_related_twe
     not_me_too_obj.remove_tweets_with_short_length(text_len_threshold)
     not_me_too_obj.extract_year()
     frame_negative_samples = not_me_too_obj.get_author_data_for_tweets()
-    utilities.save_frame(frame_negative_samples, 'variant1_1', 'NegativeSamples')
+    utilities.save_frame(frame_negative_samples, 'variant1_2', 'NegativeSamples')
 
     if is_year:
         num_samples_per_group = int(len(me_too_related_tweets) / 4)
@@ -87,8 +88,8 @@ def create_dataset_with_all_years(hollywood_data, tweet_data, me_too_related_twe
     combined_frame = pd.concat([me_too_related_tweets, frame_negative_samples])
     frame_train, frame_test = train_test_split(combined_frame, test_size=0.2, shuffle=True, stratify=combined_frame['labels'])
 
-    utilities.save_frame(frame_train, 'variant1_1', 'MeToo_df_train')
-    utilities.save_frame(frame_test, 'variant1_1', 'MeToo_df_test')
+    utilities.save_frame(frame_train, 'variant1_2', 'MeToo_df_train')
+    utilities.save_frame(frame_test, 'variant1_2', 'MeToo_df_test')
 
     return
 
