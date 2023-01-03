@@ -66,7 +66,8 @@ def create_data_frame(file_name):
 
 
 if __name__ == '__main__':
-    fileName = './data/MeToohashtagTweets3.json'
+    #fileName = './data/MeToohashtagTweets3.json'
+    fileName = './MarchForOurLives/relevant_tweets_celeb.json'
 
     # with open(fileName, encoding="utf8") as fp:
     #     bsonData = fp.read()
@@ -78,4 +79,5 @@ if __name__ == '__main__':
 
     result_frame = create_data_frame(fileName)
 
-    result_frame.to_csv('./data/MeTooTweetsPhase1Ver1.csv')
+    #result_frame.to_csv('./data/MeTooTweetsPhase1Ver1.csv')
+    result_frame.to_csv('./MarchForOurLives/MeTooTweetsPhase1Ver1.csv')

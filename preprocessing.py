@@ -87,14 +87,15 @@ class Preprocessing:
         return clean_txt
 
 
-
 if __name__ == '__main__':
 
-    obj = Preprocessing('./data/hollywood_wikidata.csv', './data/MeToohashtagTweets3.json')
+    #obj = Preprocessing('./data/hollywood_wikidata.csv', './data/MeToohashtagTweets3.json')
+    obj = Preprocessing('./data/hollywood_wikidata.csv', pd.read_csv('./MarchForOurLives/MFOL_not_processed.csv'))
     #obj.remove_ref_tweets('retweet')
     frame = obj.get_author_data_for_tweets()
     obj.plot_popular_author(15)
     tweet_distribution_dict = obj.get_tweet_stats_per_author()
+    frame.to_csv('./MarchForOurLives/MFOL_frame.csv')
 
 
 

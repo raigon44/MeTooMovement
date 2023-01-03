@@ -172,17 +172,17 @@ def main():
                     if len(tmp) > 0:
                         s["religion"] = tmp
 
-                # Twitter User account
-                if len(s.get("claims", {}).get("P6552", [])) > 0:
-                    tmp = []
-                    for v in s["claims"]["P6552"]:
-                        if (
-                            v["mainsnak"].get("datavalue", {}).get("value", {}).get("id")
-                            is not None
-                        ):
-                            tmp.append(v["mainsnak"]["datavalue"]["value"]["id"])
-                    if len(tmp) > 0:
-                        s["twitter_id"] = tmp
+                # # Twitter User account
+                # if len(s.get("claims", {}).get("P6552", [])) > 0:
+                #     tmp = []
+                #     for v in s["claims"]["P6552"]:
+                #         if (
+                #             v["mainsnak"].get("datavalue", {}).get("value", {}).get("id")
+                #             is not None
+                #         ):
+                #             tmp.append(v["mainsnak"]["datavalue"]["value"]["id"])
+                #     if len(tmp) > 0:
+                #         s["twitter_id"] = tmp
 
 
                 # Aliases. Removing leftovers and unnecessary attributes
