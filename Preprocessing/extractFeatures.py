@@ -1,6 +1,10 @@
 import json
 
 import pandas as pd
+from googleapiclient import discovery
+from googleapiclient.errors import HttpError
+import config
+import time
 import datetime
 import dateutil.parser
 
@@ -23,6 +27,8 @@ by checking the number of tweets that week or in the last seven days).
 Description: Same as the 4th feature, but for the sub-groups (Hollywood, politicians etc.).
 6. Toxicity of the tweet
 Description: Here we measure the toxicity in the tweet text using the perspective API"""
+
+pd.set_option('mode.chained_assignment',None)
 
 
 def get_author_involvement(social_movement_tweets: pd.DataFrame) -> pd.DataFrame:
@@ -82,9 +88,139 @@ def add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd
     return social_movement_tweets_frame
 
 
+def add_subgroup_level_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function takes as input a tweet and use the no.of social movement related tweets posted within the subgroup in
+    the last five days and the next five days to calculate this tweet level feature.
+    :param social_movement_tweets_frame:
+    :return: social_movement_tweets_frame
+    """
+
+    # First I need to create a json object similar to one used while calculating the overall movement relevance.
+    # Then the same logic as before can be used.
+
+    # Sort the frame by created_at column
+    # Create a dictionary with the first date in the frame as first element and last date as last element.
+
+    social_movement_tweets_frame['created_at'] = pd.to_datetime(social_movement_tweets_frame['created_at'])
+    social_movement_tweets_frame = social_movement_tweets_frame.sort_values(by=['created_at']).reset_index()
+
+    first_date = social_movement_tweets_frame.loc[0]['created_at'].date()
+    last_date = social_movement_tweets_frame.loc[len(social_movement_tweets_frame) - 1].date()
+
+
+
+
+def get_author_popularity_in_twitter(social_movement_tweets_frame: pd.DataFrame):
+
+    ## 1. Get all the tweets posted by an author
+    ## 2. For each tweet, get the 10 last tweets posted before it
+    ## 3. Take the largest public metric out of these 10 tweets.
+    ## 4. Store this a feature respective to that tweet.
+
+    pass
+
+
+def create_perspective_api_client(model_version: str, method: str):
+    """
+    Creates and returns a perspective API client.
+    :param model_version:
+    :param method:
+    :return: client
+    """
+
+    client = discovery.build(
+        method,
+        model_version,
+        developerKey=config.API_KEY,
+        discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version="+model_version,
+        static_discovery=False
+    )
+
+    return client
+
+
+def get_attributes_from_perspective_api(text: str) -> dict:
+    """
+    Get the attributes of the tweet text from the perspective API.
+    :param text:
+    :return: dictionary of result from the perspective client
+    """
+
+    client = create_perspective_api_client("v1alpha1", "commentanalyzer")
+
+    analyze_request = {
+        'comment': {'text': text},
+        'requestedAttributes': {
+            'TOXICITY': {},
+            'SEVERE_TOXICITY': {},
+            'IDENTITY_ATTACK': {},
+            'INSULT': {},
+            'PROFANITY': {},
+            'THREAT': {}
+        }
+    }
+
+    return client.comments().analyze(body=analyze_request).execute()
+
+
+def get_features_from_perspective_api(social_movement_tweets_frame: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function takes as input the dataframe containing the tweets related to the social movement and returns the
+    updated frame with all the attributes retrieved from the perspective API.
+    :param social_movement_tweets_frame:
+    :return: social_movement_tweets_frame
+    """
+
+    tweets_text_lst = social_movement_tweets_frame['text'].tolist()
+
+    severe_toxicity = []
+    toxicity = []
+    threat = []
+    insult = []
+    identity_attack = []
+    profanity = []
+
+    counter = 0
+
+    for tweet_text in tweets_text_lst:
+
+        print(counter)
+        try:
+            result = get_attributes_from_perspective_api(tweet_text)
+        except HttpError:
+            severe_toxicity.append(-1)
+            toxicity.append(-1)
+            threat.append(-1)
+            insult.append(-1)
+            identity_attack.append(-1)
+            profanity.append(-1)
+            continue
+
+        severe_toxicity.append(result['attributeScores']['SEVERE_TOXICITY']['summaryScore']['value'])
+        toxicity.append(result['attributeScores']['TOXICITY']['summaryScore']['value'])
+        threat.append(result['attributeScores']['THREAT']['summaryScore']['value'])
+        insult.append(result['attributeScores']['INSULT']['summaryScore']['value'])
+        identity_attack.append(result['attributeScores']['IDENTITY_ATTACK']['summaryScore']['value'])
+        profanity.append(result['attributeScores']['PROFANITY']['summaryScore']['value'])
+
+        time.sleep(1)  # Perspective API have a rate limit of 1 query per second.
+
+        counter = counter + 1
+
+    social_movement_tweets_frame['SEVERE_TOXICITY'] = severe_toxicity
+    social_movement_tweets_frame['TOXICITY'] = toxicity
+    social_movement_tweets_frame['THREAT'] = threat
+    social_movement_tweets_frame['INSULT'] = insult
+    social_movement_tweets_frame['IDENTITY_ATTACK'] = identity_attack
+    social_movement_tweets_frame['PROFANITY'] = profanity
+
+    return social_movement_tweets_frame
+
+
 if __name__ == '__main__':
 
-    # Getting the author involvement in the social movement.
+    ## Getting the author involvement in the social movement.
 
     # frame = pd.read_csv(r'C:\Users\raigo\PycharmProjects\MeTooMovement\CleanDataset'
     #                     r'\combined_frame_tweets_reported_and_not_reported_before_preprocessing_anything.csv')
@@ -96,8 +232,18 @@ if __name__ == '__main__':
     all_social_movement_tweets = pd.read_csv(r'C:\Users\raigo\PycharmProjects\MeTooMovement'
                                              r'\MeTooTweetsWithoutRetweets.csv')
 
-    overall_social_movement_tweets_per_day_json_file = r'C:\Users\raigo\PycharmProjects\MeTooMovement\TwitterAPI\overall_metoo_count_1.json'
+    ## Getting the overall relevance of the social movement.
 
-    all_social_movement_tweets_updated = add_overall_relevance_of_movement_per_tweet(all_social_movement_tweets, overall_social_movement_tweets_per_day_json_file)
+    # overall_social_movement_tweets_per_day_json_file = r'C:\Users\raigo\PycharmProjects\MeTooMovement\TwitterAPI\overall_metoo_count_1.json'
+    #
+    # all_social_movement_tweets_updated = add_overall_relevance_of_movement_per_tweet(all_social_movement_tweets, overall_social_movement_tweets_per_day_json_file)
+    #
+    # print(all_social_movement_tweets_updated)
 
-    print(all_social_movement_tweets_updated)
+    ## Getting the toxicity and other attributes of the tweet text from the perspective API
+
+    # all_social_movement_tweets_updated = get_features_from_perspective_api(all_social_movement_tweets)
+    #
+    # print(all_social_movement_tweets_updated.head())
+    #
+    # all_social_movement_tweets_updated.to_csv('MeToo_Movement_After_Toxicity.csv')
