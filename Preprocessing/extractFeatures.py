@@ -5,7 +5,7 @@ from googleapiclient import discovery
 from googleapiclient.errors import HttpError
 import config
 import time
-import datetime
+from datetime import timedelta
 import dateutil.parser
 
 """The objective of this program is to extract additional features.
@@ -28,7 +28,7 @@ Description: Same as the 4th feature, but for the sub-groups (Hollywood, politic
 6. Toxicity of the tweet
 Description: Here we measure the toxicity in the tweet text using the perspective API"""
 
-pd.set_option('mode.chained_assignment',None)
+pd.set_option('mode.chained_assignment', None)
 
 
 def get_author_involvement(social_movement_tweets: pd.DataFrame) -> pd.DataFrame:
@@ -41,13 +41,14 @@ def get_author_involvement(social_movement_tweets: pd.DataFrame) -> pd.DataFrame
     author_tweet_cnt_dict = social_movement_tweets['author_id'].value_counts().to_dict()
     social_movement_involvement = []
     for _, row in social_movement_tweets.iterrows():
-        social_movement_involvement.append(author_tweet_cnt_dict[row['author_id']]/len(social_movement_tweets))
+        social_movement_involvement.append(author_tweet_cnt_dict[row['author_id']] / len(social_movement_tweets))
     social_movement_tweets['author_involvement'] = social_movement_involvement
 
     return social_movement_tweets
 
 
-def add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd.DataFrame, overall_tweets_json: str) ->\
+def add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd.DataFrame,
+                                                overall_tweet_count_frame: pd.DataFrame, feature_name: str) -> \
         pd.DataFrame:
     """
     This function takes as input a tweet and use the no.of social movement related tweets posted in the last five days
@@ -55,21 +56,22 @@ def add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd
     :param: social_movement_tweets_frame, overall_tweets_json
     :return: social_movement_tweets_frame
     """
+    #
+    # with open(overall_tweets_json) as fp:
+    #     overall_tweet_count = json.load(fp)
 
-    with open(overall_tweets_json) as fp:
-        overall_tweet_count = json.load(fp)
-
-    overall_tweet_count_frame = pd.json_normalize(overall_tweet_count)
+    # overall_tweet_count_frame = pd.json_normalize(overall_tweet_count)
 
     overall_relevance = []
     social_movement_tweets_frame['created_at'] = pd.to_datetime(social_movement_tweets_frame['created_at'])
 
     for _, row in social_movement_tweets_frame.iterrows():
 
-        tweet_posted_date = str(row['created_at'].date())+'T00:00:00.000Z'
+        tweet_posted_date = str(row['created_at'].date()) + 'T00:00:00.000Z'
 
         try:
-            start_index = overall_tweet_count_frame.index[overall_tweet_count_frame['start'] == tweet_posted_date].tolist()[0]
+            start_index = \
+                overall_tweet_count_frame.index[overall_tweet_count_frame['start'] == tweet_posted_date].tolist()[0]
         except IndexError:
             overall_relevance.append(-1)
             continue
@@ -83,9 +85,17 @@ def add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd
 
         overall_relevance.append(sum(overall_tweet_count_frame[left_index:right_index]['tweet_count'].tolist()))
 
-    social_movement_tweets_frame['overall_relevance'] = overall_relevance
+    social_movement_tweets_frame[feature_name] = overall_relevance
 
     return social_movement_tweets_frame
+
+
+def get_tweet_count(required_date, frame):
+    tweet_cnt = 0
+    for _, row in frame.iterrows():
+        if row['created_at'].date() == required_date:
+            tweet_cnt += 1
+    return tweet_cnt
 
 
 def add_subgroup_level_relevance_of_movement_per_tweet(social_movement_tweets_frame: pd.DataFrame) -> pd.DataFrame:
@@ -105,14 +115,25 @@ def add_subgroup_level_relevance_of_movement_per_tweet(social_movement_tweets_fr
     social_movement_tweets_frame['created_at'] = pd.to_datetime(social_movement_tweets_frame['created_at'])
     social_movement_tweets_frame = social_movement_tweets_frame.sort_values(by=['created_at']).reset_index()
 
-    first_date = social_movement_tweets_frame.loc[0]['created_at'].date()
-    last_date = social_movement_tweets_frame.loc[len(social_movement_tweets_frame) - 1].date()
+    start_date = social_movement_tweets_frame.loc[0]['created_at'].date()
+    last_date = social_movement_tweets_frame.loc[len(social_movement_tweets_frame) - 1]['created_at'].date()
 
+    time_delta = timedelta(1)
 
+    sub_group_tweet_cnt = []
+    while start_date <= last_date:
+        tweet_cnt_day_dict = {'end': str(start_date + time_delta) + 'T00:00:00.000Z',
+                              'start': str(start_date) + 'T00:00:00.000Z',
+                              'tweet_count': get_tweet_count(start_date, social_movement_tweets_frame)}
+        sub_group_tweet_cnt.append(tweet_cnt_day_dict)
+        start_date += time_delta
+
+    subgroup_tweet_frame = pd.json_normalize(sub_group_tweet_cnt)
+
+    return add_overall_relevance_of_movement_per_tweet(social_movement_tweets_frame, subgroup_tweet_frame, 'subgroup_relevance')
 
 
 def get_author_popularity_in_twitter(social_movement_tweets_frame: pd.DataFrame):
-
     ## 1. Get all the tweets posted by an author
     ## 2. For each tweet, get the 10 last tweets posted before it
     ## 3. Take the largest public metric out of these 10 tweets.
@@ -133,7 +154,7 @@ def create_perspective_api_client(model_version: str, method: str):
         method,
         model_version,
         developerKey=config.API_KEY,
-        discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version="+model_version,
+        discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=" + model_version,
         static_discovery=False
     )
 
@@ -219,26 +240,28 @@ def get_features_from_perspective_api(social_movement_tweets_frame: pd.DataFrame
 
 
 if __name__ == '__main__':
-
     ## Getting the author involvement in the social movement.
 
     # frame = pd.read_csv(r'C:\Users\raigo\PycharmProjects\MeTooMovement\CleanDataset'
-    #                     r'\combined_frame_tweets_reported_and_not_reported_before_preprocessing_anything.csv')
-    # frame_updated = get_author_involvement(frame)
-    # print(frame_updated.head())
+    #                     r'\combined_frame_tweets_reported_and_not_reported_before_preprocessing_anything.csv'
 
     # Getting the overall relevance of the social movement when the tweet was posted
 
     all_social_movement_tweets = pd.read_csv(r'C:\Users\raigo\PycharmProjects\MeTooMovement'
                                              r'\MeTooTweetsWithoutRetweets.csv')
 
+    frame_updated = get_author_involvement(all_social_movement_tweets)
+
     ## Getting the overall relevance of the social movement.
 
-    # overall_social_movement_tweets_per_day_json_file = r'C:\Users\raigo\PycharmProjects\MeTooMovement\TwitterAPI\overall_metoo_count_1.json'
-    #
-    # all_social_movement_tweets_updated = add_overall_relevance_of_movement_per_tweet(all_social_movement_tweets, overall_social_movement_tweets_per_day_json_file)
-    #
-    # print(all_social_movement_tweets_updated)
+    overall_social_movement_tweets_per_day_json_file = r'C:\Users\raigo\PycharmProjects\MeTooMovement\TwitterAPI\overall_metoo_count_1.json'
+
+    with open(overall_social_movement_tweets_per_day_json_file) as fp:
+        overall_tweet_count = json.load(fp)
+
+    overall_tweet_frame = pd.json_normalize(overall_tweet_count)
+
+    all_social_movement_tweets_updated = add_overall_relevance_of_movement_per_tweet(frame_updated, overall_tweet_frame, 'overall_relevance')
 
     ## Getting the toxicity and other attributes of the tweet text from the perspective API
 
@@ -247,3 +270,7 @@ if __name__ == '__main__':
     # print(all_social_movement_tweets_updated.head())
     #
     # all_social_movement_tweets_updated.to_csv('MeToo_Movement_After_Toxicity.csv')
+
+    all_social_movement_tweets = add_subgroup_level_relevance_of_movement_per_tweet(all_social_movement_tweets_updated)
+
+    all_social_movement_tweets.to_csv('MeToo_Movement_Updated.csv')
