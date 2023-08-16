@@ -51,7 +51,10 @@ if __name__ == '__main__':
             '#nomoore OR #nevermore OR #meat14 OR #believesurvivors OR #sexualassualt OR #MeToo OR #METOO OR #TimesUp OR ' \
             '#WhyIDidntReport OR #NoMoore OR #NeverMoore OR #MeAt14 OR #whenIwas'   #TODO: Add the query to a file and pass it as an argument
 
-    get_tweet_count(query_variant_1, client)
+    query_variant_2 = "#marchforourlives OR #neveragain OR #guncontrolnow OR #EnoughIsEnough OR #march4ourlives OR " \
+                      "#parkland OR @AMarch4OurLives OR #GunControlNow OR enoughisenough OR #March4OurLives OR #Parkland"
+
+    get_tweet_count(query_variant_2, client)
 
 
 

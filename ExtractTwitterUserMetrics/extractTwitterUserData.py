@@ -34,7 +34,7 @@ def extract_user_data(json_file):
     twitter_author_frame['tweet_cnt'] = tweet_cnt
     twitter_author_frame['verified'] = verified_account
 
-    twitter_author_frame.to_csv('twitter_authors.csv')
+    twitter_author_frame.to_csv('twitter_authors_politicians.csv')
 
     return
 
@@ -42,6 +42,7 @@ def extract_user_data(json_file):
 if __name__ == '__main__':
 
     extract_user_data('cc_users.json')
+    extract_user_data('pp_users.json')
 
 
 

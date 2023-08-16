@@ -139,6 +139,15 @@ def get_author_popularity_in_twitter(social_movement_tweets_frame: pd.DataFrame)
     ## 3. Take the largest public metric out of these 10 tweets.
     ## 4. Store this a feature respective to that tweet.
 
+    author_ids = social_movement_tweets_frame['author_id'].value_counts().keys()
+
+    for author in author_ids:
+        all_tweets_posted_by_the_author = social_movement_tweets_frame[social_movement_tweets_frame['author_id'] == author]['tweet_id'].tolist()
+
+        for tweet in all_tweets_posted_by_the_author:
+            print()
+            # Ok. Now get the last 10 tweets by the author
+            # Loop through the tweets and get the public metric of the tweets and store it as a dictionary with tweet_id as the key
     pass
 
 
